@@ -1,0 +1,216 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum EstadoTecnico {
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoCita {
+  AGENDADA
+  ACEPTADA
+  EN_CURSO
+  PAUSADA
+  FINALIZADA
+  ENTREGADA
+  POSPUESTA
+  CANCELADA
+}
+
+enum AutorTipo {
+  CLIENTE
+  TECNICO
+}
+
+enum TipoMensaje {
+  TEXTO
+  IMAGEN
+  VIDEO
+}
+
+// ─── Modelos ─────────────────────────────────────────────
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  usuario   String   @unique
+  password  String
+  nombre    String   @default("Administrador")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  pin       String   // Hasheado con bcrypt
+  contactos String[] // Array de 1 a 2 números de teléfono
+  createdAt DateTime @default(now()) @map("created_at")
+
+  vehiculos Vehiculo[]
+  citas     Cita[]
+
+  @@map("clientes")
+}
+
+model Vehiculo {
+  id        Int      @id @default(autoincrement())
+  marca     String
+  modelo    String
+  anio      Int      @map("anio")
+  placa     String
+  notas     String?  // Alertas de modificaciones previas
+  clienteId Int      @map("cliente_id")
+
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  citas     Cita[]
+
+  @@map("vehiculos")
+}
+
+model Tecnico {
+  id        Int            @id @default(autoincrement())
+  nombre    String
+  usuario   String         @unique
+  password  String         // Hasheada con bcrypt
+  estado    EstadoTecnico  @default(ACTIVO)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  citas     Cita[]
+
+  @@map("tecnicos")
+}
+
+model Servicio {
+  id                      Int      @id @default(autoincrement())
+  nombre                  String
+  descripcion             String?
+  duracionEstimadaMinutos Int      @map("duracion_estimada_minutos")
+  precio                  Decimal  @db.Decimal(10, 2)
+  activo                  Boolean  @default(true)
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  citas     Cita[]
+
+  @@map("servicios")
+}
+
+model Accesorio {
+  id                Int      @id @default(autoincrement())
+  nombre            String
+  descripcion       String?
+  precio            Decimal  @db.Decimal(10, 2)
+  stock             Int      @default(0)
+  stockMinimoAlerta Int      @default(5) @map("stock_minimo_alerta")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  citaAccesorios CitaAccesorio[]
+
+  @@map("accesorios")
+}
+
+model Cita {
+  id                      Int         @id @default(autoincrement())
+  clienteId               Int         @map("cliente_id")
+  vehiculoId              Int         @map("vehiculo_id")
+  tecnicoId               Int?        @map("tecnico_id") // Nullable hasta que un técnico acepte
+  servicioId              Int?        @map("servicio_id")
+  estado                  EstadoCita  @default(AGENDADA)
+  horaAgendada            DateTime    @map("hora_agendada")
+  duracionEstimadaMinutos Int         @map("duracion_estimada_minutos")
+  horaInicioReal          DateTime?   @map("hora_inicio_real")
+  horaFinReal             DateTime?   @map("hora_fin_real")
+  faseActual              String?     @map("fase_actual") @default("Inspección")
+  fotoInicio              String?     @map("foto_inicio") // Path al archivo
+  fotoFin                 String?     @map("foto_fin")    // Path al archivo
+  fotoInicioExpirada      Boolean     @default(false) @map("foto_inicio_expirada")
+  fotoFinExpirada         Boolean     @default(false) @map("foto_fin_expirada")
+  motivoPosposicion       String?     @map("motivo_posposicion")
+  esInmediata             Boolean     @default(false) @map("es_inmediata")
+  adicionales             String?     @map("adicionales")
+  serviciosDetalle        String?     @map("servicios_detalle")
+  esPersonalizado         Boolean     @default(false) @map("es_personalizado")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @updatedAt @map("updated_at")
+
+  cliente        Cliente            @relation(fields: [clienteId], references: [id])
+  vehiculo       Vehiculo           @relation(fields: [vehiculoId], references: [id])
+  tecnico        Tecnico?           @relation(fields: [tecnicoId], references: [id])
+  servicio       Servicio?          @relation(fields: [servicioId], references: [id])
+  accesorios     CitaAccesorio[]
+  faseHistorial  CitaFaseHistorial[]
+  mensajes       Mensaje[]
+  evidencias     Evidencia[]
+
+  @@index([estado])
+  @@index([tecnicoId])
+  @@index([clienteId])
+  @@index([horaAgendada])
+  @@map("citas")
+}
+
+model CitaAccesorio {
+  id          Int @id @default(autoincrement())
+  citaId      Int @map("cita_id")
+  accesorioId Int @map("accesorio_id")
+  cantidad    Int @default(1)
+
+  cita      Cita      @relation(fields: [citaId], references: [id])
+  accesorio Accesorio @relation(fields: [accesorioId], references: [id])
+
+  @@unique([citaId, accesorioId])
+  @@map("cita_accesorios")
+}
+
+model CitaFaseHistorial {
+  id         Int      @id @default(autoincrement())
+  citaId     Int      @map("cita_id")
+  nombreFase String   @map("nombre_fase")
+  timestamp  DateTime @default(now())
+
+  cita Cita @relation(fields: [citaId], references: [id])
+
+  @@map("cita_fase_historial")
+}
+
+model Mensaje {
+  id         Int         @id @default(autoincrement())
+  citaId     Int         @map("cita_id")
+  autorTipo  AutorTipo   @map("autor_tipo")
+  autorId    Int         @map("autor_id")
+  contenido  String?
+  tipo       TipoMensaje @default(TEXTO)
+  archivoUrl String?     @map("archivo_url")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  expiraAt   DateTime    @map("expira_at")
+  expirado   Boolean     @default(false)
+
+  cita Cita @relation(fields: [citaId], references: [id])
+
+  @@map("mensajes")
+}
+
+model Evidencia {
+  id          Int      @id @default(autoincrement())
+  citaId      Int      @map("cita_id")
+  tipo        String   @map("tipo") // 'INICIO' | 'AVANCE' | 'FIN'
+  archivoUrl  String   @map("archivo_url")
+  archivoTipo String   @map("archivo_type") // 'IMAGEN' | 'VIDEO'
+  fase        String?  @map("fase") // Nombre de la fase en la que se subió
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  cita        Cita     @relation(fields: [citaId], references: [id])
+
+  @@map("evidencias")
+}

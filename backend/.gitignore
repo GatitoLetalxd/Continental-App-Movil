@@ -1,0 +1,8 @@
+node_modules/
+.env
+uploads/evidencia/*
+uploads/chat/*
+backups/
+!uploads/evidencia/.gitkeep
+!uploads/chat/.gitkeep
+*.log
