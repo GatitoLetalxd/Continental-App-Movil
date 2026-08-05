@@ -4,16 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
-
 class ApiService {
-  static const String _backendIp = '209.145.59.115';
-  static const int _backendPort = 3000;
+  static const String domain = 'continental.moondev.online';
 
   // Cache del token JWT en memoria para máxima velocidad
   static String? _cachedToken;
 
-  static String get baseUrl => 'http://$_backendIp:$_backendPort/api';
-  static String get rawBaseUrl => 'http://$_backendIp:$_backendPort';
+  static String get baseUrl => 'https://$domain/api';
+  static String get rawBaseUrl => 'https://$domain';
 
   static Future<String?> getToken() async {
     if (_cachedToken != null) return _cachedToken;
