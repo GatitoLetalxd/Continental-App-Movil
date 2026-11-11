@@ -1,8 +1,23 @@
-node_modules/
+# Binarios compilados
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Base de datos SQLite local y archivos temporales
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Variables de entorno locales
 .env
-uploads/evidencia/*
-uploads/chat/*
+
+# Archivos subidos y respaldos
+uploads/
 backups/
-!uploads/evidencia/.gitkeep
-!uploads/chat/.gitkeep
+
+# Logs
 *.log
