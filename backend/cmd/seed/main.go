@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	fmt.Println("🌱 Iniciando seed para SQLite...")
+	fmt.Println("🌱 Iniciando seed limpio para SQLite...")
 
 	cfg := config.LoadConfig()
 	db, err := database.InitDB(cfg.DBPath)
@@ -20,34 +20,28 @@ func main() {
 		log.Fatalf("❌ Error conectando a SQLite: %v", err)
 	}
 
-	// 1. Admin
-	adminHash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), 10)
+	// 1. Crear nuevo Administrador con usuario: admin, contraseña: 1234
+	adminHash, err := bcrypt.GenerateFromPassword([]byte("1234"), 10)
+	if err != nil {
+		log.Fatalf("❌ Error hasheando contraseña de admin: %v", err)
+	}
+
 	var admin models.Admin
 	if err := db.Where("usuario = ?", "admin").First(&admin).Error; err != nil {
 		admin = models.Admin{
 			Usuario:  "admin",
 			Password: string(adminHash),
-			Nombre:   "Administrador Continental",
+			Nombre:   "Administrador",
 		}
 		db.Create(&admin)
-		fmt.Printf("✅ Admin creado: %s (contraseña: admin123)\n", admin.Usuario)
+		fmt.Printf("✅ Admin creado: %s (contraseña: 1234)\n", admin.Usuario)
+	} else {
+		// Actualizar contraseña a 1234
+		db.Model(&admin).Update("password", string(adminHash))
+		fmt.Printf("✅ Admin actualizado: %s (contraseña: 1234)\n", admin.Usuario)
 	}
 
-	// 2. Técnicos
-	tecHash, _ := bcrypt.GenerateFromPassword([]byte("tec123"), 10)
-	tecnicos := []models.Tecnico{
-		{Nombre: "Carlos Rodríguez", Usuario: "carlos", Password: string(tecHash), Estado: "ACTIVO"},
-		{Nombre: "Miguel Torres", Usuario: "miguel", Password: string(tecHash), Estado: "ACTIVO"},
-	}
-	for _, t := range tecnicos {
-		var existente models.Tecnico
-		if err := db.Where("usuario = ?", t.Usuario).First(&existente).Error; err != nil {
-			db.Create(&t)
-			fmt.Printf("✅ Técnico creado: %s (usuario: %s, contraseña: tec123)\n", t.Nombre, t.Usuario)
-		}
-	}
-
-	// 3. Servicios
+	// 2. Servicios del taller Continental
 	servicios := []models.Servicio{
 		{Nombre: "Tapizado completo de asientos", Descripcion: ptrStr("Retapizado completo de todos los asientos del vehículo con material a elección del cliente."), DuracionEstimadaMinutos: 480, Precio: 150.00, Activo: true},
 		{Nombre: "Tapizado de puertas", Descripcion: ptrStr("Retapizado de paneles de puertas con material coordinado."), DuracionEstimadaMinutos: 240, Precio: 80.00, Activo: true},
@@ -62,9 +56,9 @@ func main() {
 			db.Create(&s)
 		}
 	}
-	fmt.Printf("✅ %d servicios verificados/creados\n", len(servicios))
+	fmt.Printf("✅ %d servicios verificados/creados en catálogo\n", len(servicios))
 
-	// 4. Accesorios
+	// 3. Accesorios del taller Continental
 	accesorios := []models.Accesorio{
 		{Nombre: "Cuero sintético negro", Descripcion: ptrStr("Rollo de cuero sintético, color negro"), Precio: 25.00, Stock: 15, StockMinimoAlerta: 3},
 		{Nombre: "Cuero sintético beige", Descripcion: ptrStr("Rollo de cuero sintético, color beige"), Precio: 25.00, Stock: 10, StockMinimoAlerta: 3},
@@ -81,34 +75,10 @@ func main() {
 			db.Create(&a)
 		}
 	}
-	fmt.Printf("✅ %d accesorios verificados/creados\n", len(accesorios))
+	fmt.Printf("✅ %d accesorios verificados/creados en catálogo\n", len(accesorios))
 
-	// 5. Cliente de prueba
-	clientePin, _ := bcrypt.GenerateFromPassword([]byte("1234"), 10)
-	var cliente models.Cliente
-	if err := db.Where("nombre = ?", "Juan Pérez").First(&cliente).Error; err != nil {
-		cliente = models.Cliente{
-			Nombre:    "Juan Pérez",
-			Pin:       string(clientePin),
-			Contactos: []string{"584121234567", "584129876543"},
-		}
-		db.Create(&cliente)
-		fmt.Printf("✅ Cliente creado: %s (PIN: 1234)\n", cliente.Nombre)
-
-		// Vehículo de prueba
-		vehiculo := models.Vehiculo{
-			Marca:     "Toyota",
-			Modelo:    "Corolla",
-			Anio:      2020,
-			Placa:     "ABC123",
-			Notas:     ptrStr("Sin modificaciones previas"),
-			ClienteID: cliente.ID,
-		}
-		db.Create(&vehiculo)
-		fmt.Println("✅ Vehículo de prueba creado: Toyota Corolla 2020")
-	}
-
-	fmt.Println("\n🎉 Seed completado exitosamente en SQLite!")
+	fmt.Println("\n🎉 Base de datos inicializada de cero con éxito!")
+	fmt.Println("👉 Acceso Admin: usuario 'admin', contraseña '1234'")
 }
 
 func ptrStr(s string) *string {
